@@ -1,0 +1,16 @@
+{
+  "status": "FAIL",
+  "refcode": "FANTIX",
+  "reason": "No module named 'torch'",
+  "traceback": "Traceback (most recent call last):\n  File \"/scratch/mmukta/MLIP_Becnhmark/run_individual.py\", line 193, in worker_relax_task\n    import torch\nModuleNotFoundError: No module named 'torch'\n",
+  "seconds": 0.0015435218811035156,
+  "seed_cif": "/scratch/mmukta/MLIP_Becnhmark/FAIL/FANTIX/FANTIX_relaxed_maceoff_fail.cif",
+  "out_cif": "",
+  "relaxation_started": false,
+  "calculator": "MACEOFF",
+  "smiles": "CC(=O)c1c(C)c(c(c(c1C)N(=O)=O)C(C)(C)C)N(=O)=O",
+  "requested_mode": "auto",
+  "resolved_seed_cif": "/scratch/mmukta/MLIP_Becnhmark/FAIL/FANTIX/FANTIX_relaxed_maceoff_fail.cif",
+  "max_relax_steps": 5000,
+  "timeout_sec": 1
+}
