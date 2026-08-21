@@ -1,0 +1,65 @@
+smiles: O=N(=O)C(C1=NNN=N1)(N(=O)=O)N(=O)=O
+# Refcode: WIKCIE
+# Pipeline: gaff -> MACEOFF
+# SourceDB: HEM.db
+#############################################################
+#             ______       _    _          _                #
+#            (_____ \     \ \  / /        | |               #
+#             _____) )   _ \ \/ / |_  ____| |               #
+#            |  ____/ | | | )  (|  _)/ _  | |               #
+#            | |    | |_| |/ /\ \ |_( (_| | |___            #
+#            |_|     \__  /_/  \_\___)__|_|_____)           #
+#                   (____/                                  #
+#---------------------(version    1.1.3)--------------------#
+#       A Python package for random crystal generation      #
+#       url: https://github.com/qzhu2017/pyxtal             #
+#       @Zhu's group at U. North Carolina at Charlotte      #
+#############################################################
+data_from_pyxtal
+#Energy: -24807.919448481764 eV/cell
+
+_symmetry_space_group_name_H-M 'P 1 21/n 1'
+_symmetry_Int_Tables_number                   14
+_symmetry_cell_setting                monoclinic
+_cell_length_a            5.714950
+_cell_length_b           21.850450
+_cell_length_c            5.920043
+_cell_angle_alpha        90.000000
+_cell_angle_beta         82.945903
+_cell_angle_gamma        90.000000
+_cell_volume            733.665020
+
+loop_
+ _symmetry_equiv_pos_site_id
+ _symmetry_equiv_pos_as_xyz
+1 'x, y, z'
+2 '-x-1/2, y+1/2, -z-1/2'
+3 '-x, -y, -z'
+4 'x-1/2, -y+1/2, z-1/2'
+
+loop_
+ _atom_site_label
+ _atom_site_type_symbol
+ _atom_site_symmetry_multiplicity
+ _atom_site_fract_x
+ _atom_site_fract_y
+ _atom_site_fract_z
+ _atom_site_occupancy
+O      O        4     0.697022    0.849281   -0.109338 1
+N      N        4     0.840039    0.884623   -0.054065 1
+O      O        4     0.964251    0.919181   -0.170774 1
+C      C        4     0.856477    0.886946    0.202806 1
+C      C        4     0.813425    0.826803    0.316042 1
+N      N        4     0.960305    0.802028    0.445504 1
+N      N        4     0.845315    0.752615    0.517612 1
+N      N        4     0.641671    0.746026    0.444160 1
+N      N        4     0.616813    0.793379    0.315192 1
+N      N        4     1.103474    0.910908    0.237458 1
+O      O        4     1.262910    0.878405    0.159599 1
+O      O        4     1.113445    0.958190    0.336878 1
+N      N        4     0.672995    0.934058    0.305859 1
+O      O        4     0.594962    0.925059    0.499960 1
+O      O        4     0.628803    0.975099    0.184111 1
+H      H        4     0.916501    0.722824    0.626845 1
+#END
+

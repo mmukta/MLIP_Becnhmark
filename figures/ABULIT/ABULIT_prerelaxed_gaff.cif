@@ -1,0 +1,73 @@
+smiles: O/N=C/c1cccc(c1O)OC
+# Refcode: ABULIT
+# SourceDB: HEM.db
+#############################################################
+#             ______       _    _          _                #
+#            (_____ \     \ \  / /        | |               #
+#             _____) )   _ \ \/ / |_  ____| |               #
+#            |  ____/ | | | )  (|  _)/ _  | |               #
+#            | |    | |_| |/ /\ \ |_( (_| | |___            #
+#            |_|     \__  /_/  \_\___)__|_|_____)           #
+#                   (____/                                  #
+#---------------------(version    1.1.3)--------------------#
+#       A Python package for random crystal generation      #
+#       url: https://github.com/qzhu2017/pyxtal             #
+#       @Zhu's group at U. North Carolina at Charlotte      #
+#############################################################
+data_from_pyxtal
+#Energy: -8.53384064 eV/cell
+
+_symmetry_space_group_name_H-M 'Pbca'
+_symmetry_Int_Tables_number                   61
+_symmetry_cell_setting              orthorhombic
+_cell_length_a            7.205000
+_cell_length_b           15.802000
+_cell_length_c           14.300000
+_cell_angle_alpha        90.000000
+_cell_angle_beta         90.000000
+_cell_angle_gamma        90.000000
+_cell_volume           1628.103763
+
+loop_
+ _symmetry_equiv_pos_site_id
+ _symmetry_equiv_pos_as_xyz
+1 'x, y, z'
+2 '-x+1/2, -y, z+1/2'
+3 '-x, y+1/2, -z+1/2'
+4 'x+1/2, -y+1/2, -z'
+5 '-x, -y, -z'
+6 'x+1/2, y, -z+1/2'
+7 'x, -y+1/2, z+1/2'
+8 '-x+1/2, y+1/2, z'
+
+loop_
+ _atom_site_label
+ _atom_site_type_symbol
+ _atom_site_symmetry_multiplicity
+ _atom_site_fract_x
+ _atom_site_fract_y
+ _atom_site_fract_z
+ _atom_site_occupancy
+O      O        8     0.509000    0.173000   -0.005000 1
+N      N        8     0.389000    0.110000    0.027000 1
+C      C        8     0.235000    0.137000    0.063000 1
+C      C        8     0.089000    0.079000    0.099000 1
+C      C        8    -0.085000    0.115000    0.122000 1
+C      C        8    -0.229000    0.064000    0.157000 1
+C      C        8    -0.202000   -0.023000    0.168000 1
+C      C        8    -0.030000   -0.060000    0.146000 1
+C      C        8     0.115000   -0.009000    0.111000 1
+O      O        8     0.282000   -0.045000    0.091000 1
+O      O        8     0.001000   -0.146000    0.158000 1
+C      C        8    -0.122000   -0.199000    0.211000 1
+H      H        8     0.613000    0.142000   -0.034000 1
+H      H        8     0.208000    0.205000    0.069000 1
+H      H        8    -0.108000    0.182000    0.112000 1
+H      H        8    -0.362000    0.092000    0.175000 1
+H      H        8    -0.316000   -0.061000    0.195000 1
+H      H        8     0.357000    0.002000    0.066000 1
+H      H        8    -0.067000   -0.264000    0.213000 1
+H      H        8    -0.260000   -0.201000    0.178000 1
+H      H        8    -0.135000   -0.176000    0.283000 1
+#END
+
