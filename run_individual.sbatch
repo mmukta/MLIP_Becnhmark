@@ -21,9 +21,16 @@ PY_SCRIPT="${PY_SCRIPT:-run_individual.py}"
 CALCULATOR="${CALCULATOR:-MACEOFF}"
 MODE="${MODE:-auto}"
 CSV_FILE="${CSV_FILE:-$BASE_DIR/entire_data.csv}"
+DB_FILE="${DB_FILE:-$BASE_DIR/HEM.db}"
+FF_STYLE="${FF_STYLE:-none}"
 TIMEOUT_SEC="${TIMEOUT_SEC:-14400}"
 MAX_RELAX_STEPS="${MAX_RELAX_STEPS:-5000}"
 LOG_TAG="${LOG_TAG:-}"
+
+if [ ! -f "$DB_FILE" ]; then
+  echo "ERROR: DB_FILE not found: $DB_FILE"
+  exit 2
+fi
 
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
@@ -41,6 +48,8 @@ echo "REFCODE=$REFCODE"
 echo "CALCULATOR=$CALCULATOR"
 echo "MODE=$MODE"
 echo "CSV_FILE=$CSV_FILE"
+echo "DB_FILE=$DB_FILE"
+echo "FF_STYLE=$FF_STYLE"
 echo "TIMEOUT_SEC=$TIMEOUT_SEC"
 echo "MAX_RELAX_STEPS=$MAX_RELAX_STEPS"
 echo "LOG_TAG=${LOG_TAG:-'(none)'}"
@@ -49,6 +58,8 @@ set -- python "$PY_SCRIPT" "$REFCODE" \
   --calculator "$CALCULATOR" \
   --mode "$MODE" \
   --csv-file "$CSV_FILE" \
+  --db-file "$DB_FILE" \
+  --ff-style "$FF_STYLE" \
   --timeout-sec "$TIMEOUT_SEC" \
   --max-relax-steps "$MAX_RELAX_STEPS"
 

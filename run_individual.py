@@ -18,16 +18,20 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 FAIL_DIR = BASE_DIR / "FAIL"
 CSV_FILE = os.environ.get("CSV_FILE", str(BASE_DIR / "entire_data.csv"))
-DEFAULT_LOG_DIR = str(BASE_DIR / "single_runs")
 DEFAULT_DB_FILE = os.environ.get("DB_FILE", str(BASE_DIR / "HEM.db"))
+OUTPUT_DIR_ENV = os.environ.get("OUTPUT_DIR", "").strip()
+OUTPUT_BASE_DIR = Path(OUTPUT_DIR_ENV).expanduser() if OUTPUT_DIR_ENV else FAIL_DIR
+if not OUTPUT_BASE_DIR.is_absolute():
+    OUTPUT_BASE_DIR = BASE_DIR / OUTPUT_BASE_DIR
+DEFAULT_LOG_DIR = str(OUTPUT_BASE_DIR / "single_runs") if OUTPUT_DIR_ENV else str(BASE_DIR / "single_runs")
 
 ID_COL = "ccdc_id"
 SMILES_COL = "CHIRAL SMILES"
 DEFAULT_CALCULATOR = os.environ.get("CALCULATOR", "MACEOFF").strip().upper() or "MACEOFF"
 FF_STYLE_BY_CALCULATOR = {
-    "MACE": "openff",
-    "MACEOFF": "openff",
-    "UMA": "openff",
+    "MACE": "none",
+    "MACEOFF": "none",
+    "UMA": "none",
     "GAFF_MACE": "gaff",
     "GAFF_MACEOFF": "gaff",
     "GAFF_UMA": "gaff",
@@ -64,7 +68,7 @@ def clean_refcode(raw: str) -> str:
 
 
 def ref_out_dir(refcode: str) -> str:
-    return str(FAIL_DIR / refcode)
+    return str(OUTPUT_BASE_DIR / refcode)
 
 
 def original_cif_path(refcode: str) -> str:
@@ -116,6 +120,27 @@ def save_structure_snapshot(snapshot_path: str, refcode: str, smiles: str, struc
         return snapshot_path
     except Exception:
         return ""
+
+
+def remove_resume_snapshots(refcode: str, calculator: str):
+    for path in (timeout_partial_cif_path(refcode, calculator), fail_snapshot_cif_path(refcode, calculator)):
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except OSError:
+            pass
+
+
+def add_relaxation_observables(res: dict, result: dict):
+    for key in (
+        "initial_energy",
+        "final_energy",
+        "initial_forces",
+        "final_forces",
+        "initial_stress",
+        "final_stress",
+    ):
+        res[key] = result.get(key)
 
 
 def write_json_atomic(path: str, obj: dict):
@@ -252,12 +277,17 @@ def worker_relax_task(
     signal.signal(signal.SIGTERM, _handle_terminate)
     signal.signal(signal.SIGINT, _handle_terminate)
 
+    def _send_result(res: dict):
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        result_q.put(res)
+
     try:
         import torch
 
         torch.set_num_threads(1)
 
-        from relax_lib import load_relaxation_structure, run_ff_then_ml_relax
+        from relax_lib import load_relaxation_structure, run_ff_then_ml_relax, run_ml_relax
 
         os.makedirs(ref_out_dir(refcode), exist_ok=True)
 
@@ -272,24 +302,34 @@ def worker_relax_task(
             c = load_relaxation_structure(cif=seed_cif, smiles=smiles)
             seed_label = seed_cif
 
-        charmm_info = load_charmm_info_from_db(db_file, refcode) if db_file else None
         ml_calculator = ML_CALCULATOR_BY_CALCULATOR[calculator]
 
         relaxation_started = True
-        result = run_ff_then_ml_relax(
-            c,
-            refcode=refcode,
-            out_dir=ref_out_dir(refcode),
-            ff_style=ff_style,
-            ml_calculator=ml_calculator,
-            ff_charge_method=ff_charge_method,
-            ff_fmax=ff_fmax,
-            ml_fmax=ml_fmax,
-            ff_max_steps=ff_max_steps,
-            ml_max_steps=max_relax_steps,
-            ff_nproc=ff_nproc,
-            charmm_info=charmm_info,
-        )
+        if ff_style == "none":
+            result = run_ml_relax(
+                c,
+                refcode=refcode,
+                out_dir=ref_out_dir(refcode),
+                ml_calculator=ml_calculator,
+                ml_fmax=ml_fmax,
+                ml_max_steps=max_relax_steps,
+            )
+        else:
+            charmm_info = load_charmm_info_from_db(db_file, refcode) if db_file else None
+            result = run_ff_then_ml_relax(
+                c,
+                refcode=refcode,
+                out_dir=ref_out_dir(refcode),
+                ff_style=ff_style,
+                ml_calculator=ml_calculator,
+                ff_charge_method=ff_charge_method,
+                ff_fmax=ff_fmax,
+                ml_fmax=ml_fmax,
+                ff_max_steps=ff_max_steps,
+                ml_max_steps=max_relax_steps,
+                ff_nproc=ff_nproc,
+                charmm_info=charmm_info,
+            )
 
         out_cif = str(result.get("out_cif", ""))
         if out_cif:
@@ -299,6 +339,7 @@ def worker_relax_task(
             prepend_smiles_to_cif(ff_cif, refcode, smiles)
 
         if result.get("status") == "OK":
+            remove_resume_snapshots(refcode, calculator)
             res = {
                 "status": "OK",
                 "refcode": refcode,
@@ -320,6 +361,7 @@ def worker_relax_task(
                 "ff_seconds": float(result.get("ff_seconds", 0.0)),
                 "ml_seconds": float(result.get("ml_seconds", 0.0)),
             }
+            add_relaxation_observables(res, result)
         else:
             res = {
                 "status": "TIMEOUT",
@@ -342,7 +384,8 @@ def worker_relax_task(
                 "ff_seconds": float(result.get("ff_seconds", 0.0)),
                 "ml_seconds": float(result.get("ml_seconds", 0.0)),
             }
-        result_q.put(res)
+            add_relaxation_observables(res, result)
+        _send_result(res)
 
     except Exception as e:
         error_details = traceback.format_exc()
@@ -360,7 +403,7 @@ def worker_relax_task(
             "calculator": calculator,
             "ff_style": ff_style,
         }
-        result_q.put(res)
+        _send_result(res)
 
 
 def parse_args() -> argparse.Namespace:
@@ -397,9 +440,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--ff-style",
-        choices=["auto", "openff", "gaff"],
-        default=os.environ.get("FF_STYLE", "auto"),
-        help="CHARMM force-field style for the position-only pre-relaxation.",
+        choices=["auto", "none", "openff", "gaff"],
+        default=os.environ.get("FF_STYLE", "none"),
+        help="Optional CHARMM pre-relaxation style. Use 'none' for calculator-only relaxation.",
     )
     parser.add_argument(
         "--ff-charge-method",
@@ -466,6 +509,8 @@ def main() -> int:
     ff_style = args.ff_style.strip().lower()
     if ff_style == "auto":
         ff_style = FF_STYLE_BY_CALCULATOR[calculator]
+    elif ff_style == "none" and calculator.startswith("GAFF_"):
+        ff_style = FF_STYLE_BY_CALCULATOR[calculator]
 
     os.makedirs(FAIL_DIR, exist_ok=True)
     os.makedirs(args.log_dir, exist_ok=True)
@@ -515,7 +560,7 @@ def main() -> int:
             int(args.max_relax_steps),
             result_q,
         ),
-        daemon=True,
+        daemon=False,
     )
     proc.start()
 
@@ -571,10 +616,22 @@ def main() -> int:
             "ff_style": ff_style,
         }
 
-    try:
-        proc.join(timeout=0)
-    except Exception:
-        pass
+    if result is not None and not timed_out:
+        try:
+            proc.join(timeout=10)
+            if proc.is_alive():
+                proc.terminate()
+                proc.join(timeout=2)
+            if proc.is_alive():
+                proc.kill()
+                proc.join(timeout=2)
+        except Exception:
+            pass
+    else:
+        try:
+            proc.join(timeout=0)
+        except Exception:
+            pass
 
     result["smiles"] = smiles
     result["requested_mode"] = args.mode

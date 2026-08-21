@@ -56,6 +56,36 @@ def _json_safe(value):
     return value
 
 
+def _ase_forces(atoms):
+    try:
+        return np.asarray(atoms.get_forces()).tolist()
+    except Exception:
+        return None
+
+
+def _ase_stress_tensor(atoms):
+    try:
+        return np.asarray(atoms.get_stress(voigt=False)).tolist()
+    except TypeError:
+        try:
+            voigt = np.asarray(atoms.get_stress())
+            if voigt.shape == (6,):
+                xx, yy, zz, yz, xz, xy = voigt.tolist()
+                return [[xx, xy, xz], [xy, yy, yz], [xz, yz, zz]]
+            return voigt.tolist()
+        except Exception:
+            return None
+    except Exception:
+        return None
+
+
+def _ase_energy(atoms):
+    try:
+        return float(atoms.get_potential_energy())
+    except Exception:
+        return None
+
+
 def _resolve_uma_checkpoint() -> str:
     candidates = []
 
@@ -347,6 +377,66 @@ def run_ff_then_ml_relax(
         "ml_converged": bool(ml_opt.optimized),
         "ml_steps": int(ml_opt.nsteps),
         "ml_seconds": float(ml_opt.cputime),
+        "initial_energy": ml_opt.initial_energy,
+        "final_energy": ml_opt.final_energy,
+        "initial_forces": ml_opt.initial_forces,
+        "final_forces": ml_opt.final_forces,
+        "initial_stress": ml_opt.initial_stress,
+        "final_stress": ml_opt.final_stress,
+    }
+
+
+def run_ml_relax(
+    structure,
+    refcode,
+    out_dir,
+    ml_calculator="MACE",
+    opt_lat=True,
+    ml_fmax=0.05,
+    ml_max_steps=5000,
+):
+    refcode = str(refcode).strip()
+    ml_calculator = str(ml_calculator).strip().upper()
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    structure = prepare_structure_for_relaxation(structure)
+
+    ml_suffix = ml_calculator.lower()
+    ml_log = out_dir / f"{refcode}_fire_{ml_suffix}.log"
+    ml_cif = out_dir / f"{refcode}_relaxed_{ml_suffix}.cif"
+
+    ml_opt = ASE_optimizer(
+        structure,
+        calculator=ml_calculator,
+        opt_lat=opt_lat,
+        logfile=str(ml_log),
+    )
+    ml_opt.run(fmax_target=float(ml_fmax), max_steps=int(ml_max_steps))
+    structure.to_file(str(ml_cif))
+
+    return {
+        "refcode": refcode,
+        "ff_style": "none",
+        "ml_calculator": ml_calculator,
+        "status": "OK" if bool(ml_opt.optimized) else "TIMEOUT",
+        "energy": float(structure.energy),
+        "ff_cif": "",
+        "out_cif": str(ml_cif),
+        "ff_log": "",
+        "ml_log": str(ml_log),
+        "ff_converged": False,
+        "ff_steps": 0,
+        "ff_seconds": 0.0,
+        "ml_converged": bool(ml_opt.optimized),
+        "ml_steps": int(ml_opt.nsteps),
+        "ml_seconds": float(ml_opt.cputime),
+        "initial_energy": ml_opt.initial_energy,
+        "final_energy": ml_opt.final_energy,
+        "initial_forces": ml_opt.initial_forces,
+        "final_forces": ml_opt.final_forces,
+        "initial_stress": ml_opt.initial_stress,
+        "final_stress": ml_opt.final_stress,
     }
 
 
@@ -564,6 +654,12 @@ class ASE_optimizer:
         self.opt_lat = opt_lat
         self.stress = None
         self.forces = None
+        self.initial_stress = None
+        self.final_stress = None
+        self.initial_forces = None
+        self.final_forces = None
+        self.initial_energy = None
+        self.final_energy = None
         self.optimized = True
         self.positions = None
         self.cell = None
@@ -737,12 +833,20 @@ class ASE_optimizer:
         s = self.structure.to_ase(resort=False)
         s.set_constraint(FixSymmetry(s))
         s.set_calculator(self.calculator)
+        self.initial_energy = _ase_energy(s)
+        self.initial_forces = _ase_forces(s)
+        self.initial_stress = _ase_stress_tensor(s)
     
         obj = UnitCellFilter(s) if self.opt_lat else s
         dyn = FIRE(obj, a=0.01, logfile=self.logfile)
         converged = dyn.run(fmax=fmax_target, steps=max_steps)
         self.nsteps = int(getattr(dyn, "nsteps", 0))
         self.reached_max_steps = (not bool(converged)) and (self.nsteps >= int(max_steps))
+        self.final_energy = _ase_energy(s)
+        self.final_forces = _ase_forces(s)
+        self.final_stress = _ase_stress_tensor(s)
+        self.forces = self.final_forces
+        self.stress = self.final_stress
 
         update_structure_from_ase_atoms(
             self.structure,
