@@ -87,7 +87,8 @@ Typical calculator-only output files:
 The JSON summary includes ML observables before and after relaxation:
 
 - `initial_energy` and `final_energy`
-- `initial_forces` and `final_forces`
+- `initial_fmax` and `final_fmax`
+- `initial_force_rms` and `final_force_rms`
 - `initial_stress` and `final_stress`
 
 For FF+ML runs, these are measured for the ML relaxation stage, after any FF pre-relaxation has completed.

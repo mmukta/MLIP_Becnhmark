@@ -63,6 +63,24 @@ def _ase_forces(atoms):
         return None
 
 
+def _force_max(forces):
+    if forces is None:
+        return None
+    values = np.asarray(forces)
+    if values.size == 0:
+        return None
+    return float(np.linalg.norm(values, axis=1).max())
+
+
+def _force_rms(forces):
+    if forces is None:
+        return None
+    values = np.asarray(forces)
+    if values.size == 0:
+        return None
+    return float(np.sqrt(np.mean(np.sum(values * values, axis=1))))
+
+
 def _ase_stress_tensor(atoms):
     try:
         return np.asarray(atoms.get_stress(voigt=False)).tolist()
@@ -379,8 +397,10 @@ def run_ff_then_ml_relax(
         "ml_seconds": float(ml_opt.cputime),
         "initial_energy": ml_opt.initial_energy,
         "final_energy": ml_opt.final_energy,
-        "initial_forces": ml_opt.initial_forces,
-        "final_forces": ml_opt.final_forces,
+        "initial_fmax": ml_opt.initial_fmax,
+        "final_fmax": ml_opt.final_fmax,
+        "initial_force_rms": ml_opt.initial_force_rms,
+        "final_force_rms": ml_opt.final_force_rms,
         "initial_stress": ml_opt.initial_stress,
         "final_stress": ml_opt.final_stress,
     }
@@ -433,8 +453,10 @@ def run_ml_relax(
         "ml_seconds": float(ml_opt.cputime),
         "initial_energy": ml_opt.initial_energy,
         "final_energy": ml_opt.final_energy,
-        "initial_forces": ml_opt.initial_forces,
-        "final_forces": ml_opt.final_forces,
+        "initial_fmax": ml_opt.initial_fmax,
+        "final_fmax": ml_opt.final_fmax,
+        "initial_force_rms": ml_opt.initial_force_rms,
+        "final_force_rms": ml_opt.final_force_rms,
         "initial_stress": ml_opt.initial_stress,
         "final_stress": ml_opt.final_stress,
     }
@@ -656,8 +678,10 @@ class ASE_optimizer:
         self.forces = None
         self.initial_stress = None
         self.final_stress = None
-        self.initial_forces = None
-        self.final_forces = None
+        self.initial_fmax = None
+        self.final_fmax = None
+        self.initial_force_rms = None
+        self.final_force_rms = None
         self.initial_energy = None
         self.final_energy = None
         self.optimized = True
@@ -834,7 +858,9 @@ class ASE_optimizer:
         s.set_constraint(FixSymmetry(s))
         s.set_calculator(self.calculator)
         self.initial_energy = _ase_energy(s)
-        self.initial_forces = _ase_forces(s)
+        initial_forces = _ase_forces(s)
+        self.initial_fmax = _force_max(initial_forces)
+        self.initial_force_rms = _force_rms(initial_forces)
         self.initial_stress = _ase_stress_tensor(s)
     
         obj = UnitCellFilter(s) if self.opt_lat else s
@@ -843,9 +869,11 @@ class ASE_optimizer:
         self.nsteps = int(getattr(dyn, "nsteps", 0))
         self.reached_max_steps = (not bool(converged)) and (self.nsteps >= int(max_steps))
         self.final_energy = _ase_energy(s)
-        self.final_forces = _ase_forces(s)
+        final_forces = _ase_forces(s)
+        self.final_fmax = _force_max(final_forces)
+        self.final_force_rms = _force_rms(final_forces)
         self.final_stress = _ase_stress_tensor(s)
-        self.forces = self.final_forces
+        self.forces = final_forces
         self.stress = self.final_stress
 
         update_structure_from_ase_atoms(

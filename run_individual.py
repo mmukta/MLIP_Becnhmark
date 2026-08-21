@@ -135,8 +135,10 @@ def add_relaxation_observables(res: dict, result: dict):
     for key in (
         "initial_energy",
         "final_energy",
-        "initial_forces",
-        "final_forces",
+        "initial_fmax",
+        "final_fmax",
+        "initial_force_rms",
+        "final_force_rms",
         "initial_stress",
         "final_stress",
     ):
